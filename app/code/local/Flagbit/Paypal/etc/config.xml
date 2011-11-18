@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<modules>
+		<Flagbit_Paypal>
+			<version>0.1.0</version>
+		</Flagbit_Paypal>
+	</modules>
+	<global>
+	    <helpers>
+	        <flagbit_paypal>
+	            <class>Flagbit_Paypal_Helper</class>
+	        </flagbit_paypal>
+	    </helpers>
+		<models>
+			<flagbit_paypal>
+				<class>Flagbit_Paypal_Model</class>
+			</flagbit_paypal>
+			<paypal>
+				<rewrite>
+					<api_standard>Flagbit_Paypal_Model_Api_Standard</api_standard>
+				</rewrite>
+				<rewrite>
+                    <cart>Flagbit_Paypal_Model_Cart</cart>
+				</rewrite>
+			</paypal>
+		</models>
+	</global>
+    <frontend>
+        <translate>
+            <modules>
+                <flagbit_paypal>
+                    <files>
+                        <default>Flagbit_Paypal.csv</default>
+                    </files>
+                </flagbit_paypal>
+            </modules>
+        </translate>
+    </frontend>
+</config>
