@@ -1,5 +1,11 @@
 <?php
-
+ /**
+ * extend addItem with taxpercent
+ *
+ * @category   Flagbit
+ * @package    Flagbit_Paypal_Model_Cart
+ * @author     Flagbit GmbH & Co. KG <mike.becker@flagbit.de>
+ */
 class Flagbit_Paypal_Model_Cart extends Mage_Paypal_Model_Cart
 {
 

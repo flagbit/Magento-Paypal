@@ -9,11 +9,11 @@
 class Flagbit_Paypal_Model_Api_Standard extends Mage_Paypal_Model_Api_Standard
 {
 
-	/**
-	 * Combine products by vat if amount greater this value
-	 * @var int
-	 */
-	protected $_combineProductsLimit = 3;
+    /**
+     * Combine products by vat if amount greater this value
+     * @var int
+     */
+    protected $_combineProductsLimit = 90;
 
 
     /**
@@ -34,20 +34,20 @@ class Flagbit_Paypal_Model_Api_Standard extends Mage_Paypal_Model_Api_Standard
         if ($this->getIsLineItemsEnabled()) {
             $this->_cart->isShippingAsItem(true);
         }
-		
-		# array with items
-		#$_items = parent::_exportLineItems($request, $i);
-		$_items = $this->_cart->getItems();
+        
+        # array with items
+        #$_items = parent::_exportLineItems($request, $i);
+        $_items = $this->_cart->getItems();
 
         if (empty($_items) || !$this->getIsLineItemsEnabled()) {
             return;
         }
-		
-		if( count($_items) <= $this->_combineProductsLimit ) {
-			# original output
-			#return $_items;
-			return parent::_exportLineItems($request, $i);
-		}
+        
+        if( count($_items) <= $this->_combineProductsLimit ) {
+            # original output
+            #return $_items;
+            return parent::_exportLineItems($request, $i);
+        }
 
         // always add cart totals, even if line items are not requested
         if ($this->_lineItemTotalExportMap) {
@@ -59,85 +59,88 @@ class Flagbit_Paypal_Model_Api_Standard extends Mage_Paypal_Model_Api_Standard
             }
         }
 
-		# modified output
+        # modified output
         $result = null;
-		
-		$_vatArr = array();
-		
-        $_i = 1;
         
-		# loop all cart items an build vat array
+        $_vatArr = array();
+        
+        $_singleItemCount = 1;
+
+        # loop all cart items an build vat array
         foreach ($_items as $item) {
 
-			$_itemTaxPercent = $item->getTaxPercent();
+            $_itemTaxPercent = $item->getTaxPercent();
             
-			# vat_7, vat_19
+            # get qty to manually calculate the total price
+            $_itemQty = $item->getQty();
+
+            # vat_7, vat_19
             if( $_itemTaxPercent != '' ) {
                 $_itemTaxKey = sprintf('vat_%s', $_itemTaxPercent);
             } else {
                 # items with no tax. shipping for example
-                $_itemTaxKey = sprintf('single_%d', $_i++);
+                $_itemTaxKey = sprintf('single_%d', $_singleItemCount++);
             }
 
-			# init arrays
-			if( !isset($_vatArr[$_itemTaxKey]) ) {
-				$_vatArr[$_itemTaxKey] = array();
-			}
-			if( !isset($_vatArr[$_itemTaxKey]['amount']) ) {
-				$_vatArr[$_itemTaxKey]['amount'] = 0;
-			}
-			
-			# loop id, name, qty, amount and tax_percent
+            # init arrays
+            if( !isset($_vatArr[$_itemTaxKey]) ) {
+                $_vatArr[$_itemTaxKey] = array();
+            }
+            if( !isset($_vatArr[$_itemTaxKey]['amount']) ) {
+                $_vatArr[$_itemTaxKey]['amount'] = 0;
+            }
+            
+            # loop id, name, qty, amount and tax_percent
             foreach ($this->_lineItemExportItemsFormat as $publicKey => $privateFormat) 
             {
                 $result = true;
-				# $item->getName(), $item->getTaxPercent()
+                # $item->getName(), $item->getTaxPercent()
                 $value = $item->getDataUsingMethod($publicKey);
-				
+                
                 if (isset($this->_lineItemExportItemsFilters[$publicKey]))
                 {
                     $callback   = $this->_lineItemExportItemsFilters[$publicKey];
-                    $value 		= call_user_func(array($this, $callback), $value);
+                    $value         = call_user_func(array($this, $callback), $value);
                 }
                 if (is_float($value)) {
                     $value = $this->_filterAmount($value);
                 }
-				
+                
                 if( $_itemTaxPercent != '' && $publicKey != 'amount') {
-					continue;
+                    continue;
                 }
 
                 # summarize only amount
                 if( $publicKey == 'amount' ) {
-    				# $_vatArr['vat_19][amount] += 100
-                    $_vatArr[$_itemTaxKey][$publicKey] += $value;
+                    # $_vatArr['vat_19][amount] += 5x100
+                    $_vatArr[$_itemTaxKey][$publicKey] += ($_itemQty * $value);
                 } else {
                     $_vatArr[$_itemTaxKey][$publicKey] = $value;
                 }
             }
-			
+            
             if( !isset($_vatArr[$_itemTaxKey]['qty']) )
             {
                 $_vatArr[$_itemTaxKey]['qty']  = 1;
-                $_vatArr[$_itemTaxKey]['id']   = md5($_itemTaxKey);
+                $_vatArr[$_itemTaxKey]['id']   = md5($_itemTaxKey.rand(1,100).date('Y-m-d H:i:s'));
                 $_vatArr[$_itemTaxKey]['name'] = sprintf(Mage::helper('flagbit_paypal')->__('Products with %s percent vat'),$_itemTaxPercent);
             }
         }
 
-		# build $request array to use in Mage_Paypal_Block_Standard_Redirect
-		foreach ($_vatArr as $key => $value)
-		{
-			# loop id, name, qty, amount and tax_percent
+        # build $request array to use in Mage_Paypal_Block_Standard_Redirect
+        foreach ($_vatArr as $key => $value)
+        {
+            # loop id, name, qty, amount and tax_percent
             foreach ($this->_lineItemExportItemsFormat as $publicKey => $privateFormat) 
             {
-            	# 										$_vatArr['vat_19][amount]
+                #                                         $_vatArr['vat_19][amount]
                 $request[sprintf($privateFormat, $i)] = $value[$publicKey];
-			}
-			$i++;
-		}
+            }
+            $i++;
+        }
 
-		return $result;
-		
+        return $result;
+        
     }
-	
+    
 }
